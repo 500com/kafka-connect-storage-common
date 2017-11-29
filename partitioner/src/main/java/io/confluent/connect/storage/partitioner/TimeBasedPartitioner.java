@@ -16,6 +16,9 @@
 
 package io.confluent.connect.storage.partitioner;
 
+import io.confluent.connect.storage.common.SchemaGenerator;
+import io.confluent.connect.storage.common.StorageCommonConfig;
+import io.confluent.connect.storage.errors.PartitionException;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.connector.ConnectRecord;
@@ -28,7 +31,6 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +38,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import io.confluent.connect.storage.common.SchemaGenerator;
-import io.confluent.connect.storage.common.StorageCommonConfig;
-import io.confluent.connect.storage.errors.PartitionException;
 
 public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
   // Duration of a partition in milliseconds.
@@ -153,9 +151,11 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
   @Override
   public String encodePartition(SinkRecord sinkRecord) {
     long timestamp = timestampExtractor.extract(sinkRecord);
+
     DateTime bucket = new DateTime(
         getPartition(partitionDurationMs, timestamp, formatter.getZone())
     );
+
     return bucket.toString(formatter);
   }
 
@@ -231,7 +231,17 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
     @Override
     public void configure(Map<String, Object> config) {
       fieldName = (String) config.get(PartitionerConfig.TIMESTAMP_FIELD_NAME_CONFIG);
-      dateTime = ISODateTimeFormat.dateTime();
+      //dateTime = ISODateTimeFormat.dateTime();
+
+      String localeString = (String) config.get(PartitionerConfig.LOCALE_CONFIG);
+      String timeZoneString = (String) config.get(PartitionerConfig.TIMEZONE_CONFIG);
+
+      DateTimeZone timeZone = DateTimeZone.forID(timeZoneString);
+      Locale locale = new Locale(localeString);
+
+      dateTime = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
+                                .withZone(timeZone)
+                                .withLocale(locale);
     }
 
     @Override
@@ -252,7 +262,7 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
           case INT64:
             return ((Number) timestampValue).longValue();
           case STRING:
-            return dateTime.parseMillis((String) timestampValue);
+            return dateTime.parseDateTime((String) timestampValue).getMillis();
           default:
             log.error(
                 "Unsupported type '{}' for user-defined timestamp field.",
