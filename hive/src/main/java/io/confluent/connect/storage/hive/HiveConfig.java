@@ -16,6 +16,7 @@
 
 package io.confluent.connect.storage.hive;
 
+import io.confluent.connect.storage.common.ComposableConfig;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
@@ -26,8 +27,6 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-import io.confluent.connect.storage.common.ComposableConfig;
 
 public class HiveConfig extends AbstractConfig implements ComposableConfig {
 
@@ -61,6 +60,17 @@ public class HiveConfig extends AbstractConfig implements ComposableConfig {
       "The database to use when the connector creates tables in Hive.";
   public static final String HIVE_DATABASE_DEFAULT = "default";
   public static final String HIVE_DATABASE_DISPLAY = "Hive database";
+
+  //add by luwc
+  //add topic map for hive table
+  public static final String TOPIC_TABLE_MAP_CONFIG = "topic.table.map";
+  public static final String TOPIC_TABLE_MAP_DOC =
+          "A map from kafka topic name to the destination hive table name,"
+           +       " represented as a list of ``topic:table`` pairs";
+  public static final String TOPIC_TABLE_MAP_DEFAULT = "";
+  private static final String TOPIC_TABLE_MAP_DISPLAY = "Topic to table map";
+
+
 
   // Schema group
   public static final String SCHEMA_COMPATIBILITY_CONFIG = "schema.compatibility";
@@ -155,6 +165,17 @@ public class HiveConfig extends AbstractConfig implements ComposableConfig {
           HIVE_DATABASE_DISPLAY,
           hiveIntegrationDependentsRecommender
       );
+      CONFIG_DEF.define(
+              TOPIC_TABLE_MAP_CONFIG,
+              Type.LIST,
+              TOPIC_TABLE_MAP_DEFAULT,
+              Importance.LOW,
+              TOPIC_TABLE_MAP_DOC,
+              group,
+              ++orderInGroup,
+              Width.MEDIUM,
+              TOPIC_TABLE_MAP_DISPLAY,
+              hiveIntegrationDependentsRecommender);
     }
 
     {
@@ -175,6 +196,7 @@ public class HiveConfig extends AbstractConfig implements ComposableConfig {
           SCHEMA_COMPATIBILITY_DISPLAY,
           schemaCompatibilityRecommender
       );
+
     }
   }
 
